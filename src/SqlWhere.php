@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace src;
 
-use entity\EntityInterface;
-
 class SqlWhere
 {
     
-    private $entity;
+    private $fields;
     private $stringInitial;
     private $stringFinal;
     private $stamments;
@@ -17,9 +15,9 @@ class SqlWhere
     private $clauses;
     private $newClauses;
     
-    public function __construct(string $where, EntityInterface $entity)
+    public function __construct(string $where, array $fields)
     {
-        $this->entity = $entity;
+        $this->fields = $fields;
         $this->stringInitial = "[{$where}]";
         $this->separateIntoClauses();
         $this->saveSpecialOperators();
@@ -97,15 +95,15 @@ class SqlWhere
                     $this->stamments[":value{$key}"] = $match[$key][5];
                 }
                 
-                if(!in_array($match[$key][2], $this->getAtributes($this->entity)))
+                if(!in_array($match[$key][2], $this->fields))
                 {
-                    throw new \Exception("Cláusula inválida - Não corresponde a um campo da tabela");
+                    throw new \Exception("FALHA - setWhere(): [{$clause}] Cláusula não corresponde a um campo da tabela");
                 }
             }
             
             if(empty($match[$key]))
             {
-                throw new \Exception("FALHA: [{$clause}] Clausula inválida");
+                throw new \Exception("FALHA - setWhere(): [{$clause}] String não corresponde a uma cláusula válida");
             }
         }
     }

@@ -29,7 +29,7 @@ class SqlRead implements SqlReadInterface
     {
         $this->entity = $entity;
         $this->table = $entity->getTableName();
-        $this->fields = $entity->getAtributes();
+        $this->setFields();
         
         $this->count = false;
         
@@ -92,20 +92,36 @@ class SqlRead implements SqlReadInterface
         return $this->stamments;
     }
     
+    private function setFields()
+    {
+        foreach ($this->entity->getAtributes() as $atribute)
+        {
+            $this->fields[] = "{$this->table}.{$atribute}";
+        }
+    }
+    
+    private function isValidField(string $field)
+    {
+        if(strstr('.', $field)===false)
+            $field = "{$this->table}.{$field}";
+        
+        return in_array($field, $this->fields);
+    }
+    
     public function showField(string $field)
     {
-        if(in_array($field, $this->fields))
+        if($this->isValidField($field))
             $this->fieldToShow = $field;
     }
 
     public function setWhere(string $where)
     {
-        $this->where = new SqlWhere($where, $this->entity);
+        $this->where = new SqlWhere($where, $this->fields);
         $this->stamments = $this->where->getStamments();
     }
 
     public function setJoin(EntityInterface $entity, string $on, $joinType='INNER')
-    {
+    {        
         $tableName = $entity->getTableName();
         
         foreach ($entity->getAtributes() as $field)
@@ -113,17 +129,24 @@ class SqlRead implements SqlReadInterface
             $this->fields[count($this->fields)] = "{$tableName}.{$field}";
         }
         
-        $tableName = (is_null($tableAlias) ? $this->getTableName($entity) : "{$this->getTableName($entity)} AS {$tableAlias}");
+        if(!in_array($joinType, array('INNER', 'LEFT', 'RIGHT')))
+            throw new \Exception("FALHA - setJoin(): [{$joinType}] \$joinType inválido");
+        
+        foreach (explode('=', $on) as $field)
+        {
+            if($this->isValidField($field)===false)
+                throw new \Exception("FALHA - setJoin(): [{$field}] Campo inválido para a cláusula \$on");
+        }
+        
         $this->joins[count($this->joins)] = "{$joinType} JOIN {$tableName} ON {$on}";
     }
 
     public function setOrder($orderBy, $descOrder=false)
     {
-        var_dump("Verificar também caso não se tenha passado a tabela do campo");die;
-        if(!in_array($orderBy, $this->fields))
-            throw new \Exception("FALHA: [{$orderBy}] Campo desconhecido para ordenar consulta");
+        if(!$this->isValidField($orderBy))
+            throw new \Exception("FALHA - setOrder(): [{$orderBy}] Campo desconhecido para ordenar consulta");
         
-        $this->order = $orderBy;
+        $this->order = (is_numeric(strstr('.', $orderBy)) ? $orderBy : "{$this->table}.{$orderBy}");
         if($descOrder)
             $this->order.= " DESC";
         else 
@@ -133,9 +156,9 @@ class SqlRead implements SqlReadInterface
     public function setLimit(int $limit, int $offset=0)
     {
         if($limit < 1)
-            throw new \Exception("FALHA: [{$limit}] Valor da variável \$limit menor que 1");
+            throw new \Exception("FALHA - setLimit(): [{$limit}] Valor da variável \$limit menor que 1");
         if($offset < 0)
-            throw new \Exception("FALHA: [{$offset}] Valor da variável \$offset menor que 0");
+            throw new \Exception("FALHA - setLimit(): [{$offset}] Valor da variável \$offset menor que 0");
         
         $this->limit = "{$offset}, {$limit}";
     }
