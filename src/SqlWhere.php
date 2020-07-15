@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace src;
 
-use src\interfaces\EntityInterface;
-use src\traits\EntityHandlerTrait;
-
-require_once 'src/traits/EntityHandlerTrait.php';
+use entity\EntityInterface;
 
 class SqlWhere
 {
-    use EntityHandlerTrait;
     
     private $entity;
     private $stringInitial;
@@ -101,10 +97,15 @@ class SqlWhere
                     $this->stamments[":value{$key}"] = $match[$key][5];
                 }
                 
-                if(!in_array($match[$key][2], $this->getProperties($this->entity)))
+                if(!in_array($match[$key][2], $this->getAtributes($this->entity)))
                 {
                     throw new \Exception("Cláusula inválida - Não corresponde a um campo da tabela");
                 }
+            }
+            
+            if(empty($match[$key]))
+            {
+                throw new \Exception("FALHA: [{$clause}] Clausula inválida");
             }
         }
     }

@@ -2,6 +2,8 @@
 
 namespace src\interfaces;
 
+use entity\EntityInterface;
+
 require_once 'src/interfaces/SqlInterface.php';
 
 interface SqlReadInterface extends SqlInterface
@@ -27,13 +29,12 @@ interface SqlReadInterface extends SqlInterface
     public function setLimit(int $limit, int $offset=0);
     
     /**
-     * Une uma tabela com sua rela√ß√£o para a consulta
+     * Une uma tabela com sua relaÁ„o para a consulta
      * @param EntityInterface $entity
-     * @param string $on - Rela√ß√£o entre as tabelas
-     * @param string $tableAlias - Por padr√£o a tabela n√£o ter√° um alias
-     * @param string $joinType - INNER por padr√£o
+     * @param string $on - RelaÁ„o entre as tabelas
+     * @param string $joinType - INNER por padr„o
      */
-    public function setJoin(EntityInterface $entity, string $on, string $tableAlias=null, $joinType='INNER');
+    public function setJoin(EntityInterface $entity, string $on, $joinType='INNER');
     
     /**
      * Concatena dois ou mais campos da consulta

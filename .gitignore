@@ -11,3 +11,5 @@
 
 #Arquivos
 /config/*.json
+
+/vendor/

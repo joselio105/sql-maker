@@ -1,12 +1,8 @@
 <?php
 
-namespace test;
+namespace entity;
 
-require_once 'src/interfaces/EntityInterface.php';
-
-use src\interfaces\EntityInterface;
-
-class Usuario implements EntityInterface
+class Usuario
 {
     private $id;
     private $nome;

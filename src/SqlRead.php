@@ -5,17 +5,13 @@ declare(strict_types=1);
 namespace src;
 
 use src\interfaces\SqlReadInterface;
-use src\interfaces\EntityInterface;
-use src\traits\EntityHandlerTrait;
+use entity\EntityInterface;
 
 require_once 'src/interfaces/SqlReadInterface.php';
 require_once 'src/SqlWhere.php';
-require_once 'src/traits/EntityHandlerTrait.php';
 
 class SqlRead implements SqlReadInterface
-{
-    use EntityHandlerTrait;
-    
+{    
     private $entity;
     private $table;
     private $fields;
@@ -32,18 +28,8 @@ class SqlRead implements SqlReadInterface
     public function __construct(EntityInterface $entity)
     {
         $this->entity = $entity;
-        $this->table = $this->getTableName($entity);
-        $this->fields = array();
-        if(!empty($this->getProperties($entity)))
-        {
-            foreach($this->getProperties($entity) as $field)
-            {
-                $this->fields[] = "{$this->table}.{$field}";
-            }
-        }else 
-        {
-            throw new \Exception("Classe inválida - Sem atributos");
-        }
+        $this->table = $entity->getTableName();
+        $this->fields = $entity->getAtributes();
         
         $this->count = false;
         
@@ -118,11 +104,11 @@ class SqlRead implements SqlReadInterface
         $this->stamments = $this->where->getStamments();
     }
 
-    public function setJoin(EntityInterface $entity, string $on, string $tableAlias=null, $joinType='INNER')
+    public function setJoin(EntityInterface $entity, string $on, $joinType='INNER')
     {
-        $tableName = (!is_null($tableAlias) ? $tableAlias : $this->getTableName($entity));
+        $tableName = $entity->getTableName();
         
-        foreach ($this->getProperties($entity) as $field)
+        foreach ($entity->getAtributes() as $field)
         {
             $this->fields[count($this->fields)] = "{$tableName}.{$field}";
         }
@@ -133,6 +119,10 @@ class SqlRead implements SqlReadInterface
 
     public function setOrder($orderBy, $descOrder=false)
     {
+        var_dump("Verificar também caso não se tenha passado a tabela do campo");die;
+        if(!in_array($orderBy, $this->fields))
+            throw new \Exception("FALHA: [{$orderBy}] Campo desconhecido para ordenar consulta");
+        
         $this->order = $orderBy;
         if($descOrder)
             $this->order.= " DESC";
@@ -142,6 +132,11 @@ class SqlRead implements SqlReadInterface
 
     public function setLimit(int $limit, int $offset=0)
     {
+        if($limit < 1)
+            throw new \Exception("FALHA: [{$limit}] Valor da variável \$limit menor que 1");
+        if($offset < 0)
+            throw new \Exception("FALHA: [{$offset}] Valor da variável \$offset menor que 0");
+        
         $this->limit = "{$offset}, {$limit}";
     }
 

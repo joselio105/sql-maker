@@ -1,0 +1,14 @@
+{
+    "name": "joselio105/sql-maker",
+    "description": "Gerador de c\u0000digo SQL",
+    "type": "library",
+    "require": {
+        "phpunit/phpunit": "^9.2"
+    },
+    "authors": [
+        {
+            "name": "Jose Helio",
+            "email": "jose.helio@gmail.com"
+        }
+    ]
+}
