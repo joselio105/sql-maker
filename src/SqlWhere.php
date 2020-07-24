@@ -13,12 +13,16 @@ class SqlWhere
     private $stamments;
     private $specialOperators;
     private $clauses;
+    private $clauseParts;
     private $newClauses;
     
     public function __construct(string $where, array $fields)
     {
         $this->fields = $fields;
         $this->stringInitial = "[{$where}]";
+        $this->clauses = [];
+        $this->newClauses = [];
+        
         $this->separateIntoClauses();
         $this->saveSpecialOperators();
         $this->setStamments();
@@ -32,6 +36,17 @@ class SqlWhere
     public function getStamments()
     {
         return $this->stamments;
+    }
+    
+    public function getClause($clauseId)
+    {
+        if(key_exists($clauseId, $this->clauses))
+            return $this->clauses[$clauseId];
+    }
+    
+    public function getClauseParts()
+    {
+        return $this->clauseParts;
     }
     
     private function separateIntoClauses()
@@ -84,26 +99,16 @@ class SqlWhere
         $pattern.= '([\"\']{0,1})';                     //fecha delimitador de valor
         $pattern.= '([\)\s]*)$/';                       //fim da condição
         
-        $match = array();
-        foreach ($this->clauses as $key=>$clause)
+        $this->clauseParts = array();
+        foreach ($this->clauses as $clauseKey=>$clause)
         {
-            if(preg_match($pattern, $clause, $match[$key]) == 1)
+            if(preg_match($pattern, $clause, $this->clauseParts[$clauseKey]) == 1)
             {
-                if($match[$key][5] != 'IS NULL')
+                if($this->clauseParts[$clauseKey][5] != 'IS NULL')
                 {
-                    $this->newClauses[$key] = str_replace($match[$key][4].$match[$key][5].$match[$key][6], ":value{$key}", $clause);
-                    $this->stamments[":value{$key}"] = $match[$key][5];
+                    $this->newClauses[$clauseKey] = str_replace($this->clauseParts[$clauseKey][4].$this->clauseParts[$clauseKey][5].$this->clauseParts[$clauseKey][6], ":value{$clauseKey}", $clause);
+                    $this->stamments[":value{$clauseKey}"] = $this->clauseParts[$clauseKey][5];
                 }
-                
-                if(!in_array($match[$key][2], $this->fields))
-                {
-                    throw new \Exception("FALHA - setWhere(): [{$clause}] Cláusula não corresponde a um campo da tabela");
-                }
-            }
-            
-            if(empty($match[$key]))
-            {
-                throw new \Exception("FALHA - setWhere(): [{$clause}] String não corresponde a uma cláusula válida");
             }
         }
     }

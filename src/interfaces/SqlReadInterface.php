@@ -29,12 +29,12 @@ interface SqlReadInterface extends SqlInterface
     public function setLimit(int $limit, int $offset=0);
     
     /**
-     * Une uma tabela com sua relação para a consulta
+     * Une uma tabela com sua relaï¿½ï¿½o para a consulta
      * @param EntityInterface $entity
-     * @param string $on - Relação entre as tabelas
-     * @param string $joinType - INNER por padrão
+     * @param string $on - Relaï¿½ï¿½o entre as tabelas
+     * @param string $joinType - INNER por padrï¿½o
      */
-    public function setJoin(EntityInterface $entity, string $on, $joinType='INNER');
+    public function setJoin(EntityInterface $entity, string $onClause, string $joinType='INNER');
     
     /**
      * Concatena dois ou mais campos da consulta
@@ -49,7 +49,7 @@ interface SqlReadInterface extends SqlInterface
      * @param string $query
      * @param string $alias
      */
-    public function setSubQuery(string $query, string $alias);
+    public function setSubQuery(SqlReadInterface $query, string $alias);
     
     /**
      * Indica que a consulta serÃ¡ uma contagem de elementos

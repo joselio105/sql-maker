@@ -9,6 +9,7 @@ use entity\EntityInterface;
 
 require_once 'src/interfaces/SqlReadInterface.php';
 require_once 'src/SqlWhere.php';
+require_once 'src/SqlJoin.php';
 
 class SqlRead implements SqlReadInterface
 {    
@@ -18,8 +19,10 @@ class SqlRead implements SqlReadInterface
     private $fieldToShow;
     private $where;
     private $joins;
-    private $order;
+    private $orderBy;
+    private $orderGrow;
     private $limit;
+    private $offset;
     private $count;
     private $sum;
     private $concats;
@@ -33,13 +36,15 @@ class SqlRead implements SqlReadInterface
         
         $this->count = false;
         
-        $this->joins = array();
-        $this->concats = array();
-        $this->subQueries = array();
+        $this->joins = [];
+        $this->concats = [];
+        $this->subQueries = [];
     }
     
     public function __toString()
     {
+        $this->validations();
+        
         $sql = "SELECT {$this->getFields()}FROM {$this->table}{$this->getWhere()}{$this->getJoins()}{$this->getOrder()}{$this->getLimit()}";
         
         return $sql;
@@ -56,7 +61,16 @@ class SqlRead implements SqlReadInterface
         if(isset($this->fieldToShow))
             return "{$this->fieldToShow} ";
         else
+        {
+            foreach ($this->concats as $alias=>$concat)
+            {
+                $stringFields = implode(", '{$concat['separator']}', ", $concat['fields']);
+                
+                $this->fields[count($this->fields)] = "CONCAT ({$stringFields}) AS {$alias}";
+            }
+            
             return implode(",\n\t", $this->fields)."\n";
+        }
     }
     
     private function getWhere()
@@ -72,19 +86,100 @@ class SqlRead implements SqlReadInterface
         if(!empty($this->joins))
             $string = "\n".implode("\n", $this->joins);
         
+        foreach ($this->joins as $join)
+            $string.= "\n{$join->__toString()}";
+        
         return $string;
     }
 
     private function getOrder()
     {
-        if(isset($this->order))
-            return " \nORDER BY {$this->order}";
+        if(isset($this->orderBy))
+            return " \nORDER BY {$this->orderBy} {$this->orderGrow}";
     }
 
     private function getLimit()
     {
         if(isset($this->limit))
-            return " \nLIMIT {$this->limit}";
+            return " \nLIMIT {$this->offset}, {$this->limit}";
+    }
+    
+    private function validations()
+    {
+        $this->validWhere();
+        $this->validOrder();
+        $this->validLimit();
+        $this->validJoin();
+        $this->validConcat();
+        $this->validSum();
+    }
+    
+    private function validWhere()
+    {
+        if(!isset($this->where))
+            return true;
+        
+        foreach ($this->where->getClauseParts() as $clauseId=>$clause)
+        {
+            if(empty($clause))
+            {
+                throw new \Exception("FALHA - setWhere(): [{$this->where->getClause($clauseId)}] String não corresponde a uma cláusula válida");
+            }
+            
+            if($this->isValidField($clause[2]) === false)
+            {
+                throw new \Exception("FALHA - setWhere(): [{$clause[0]}] Cláusula não se refere a um campo da tabela");
+            }
+        }
+    }
+    
+    private function validOrder()
+    {
+        if(!$this->isValidField($this->orderBy))
+            throw new \Exception("FALHA - setOrder(): [{$this->orderBy}] Campo desconhecido para ordenar consulta");            
+    }
+    
+    private function validLimit()
+    {
+        if($this->limit < 1)
+            throw new \Exception("FALHA - setLimit(): [{$this->limit}] Valor da variável \$limit menor que 1");
+        
+        if($this->offset < 0)
+            throw new \Exception("FALHA - setLimit(): [{$this->offset}] Valor da variável \$offset menor que 0");
+                
+    }
+    
+    private function validJoin()
+    {   
+        foreach ($this->joins as $join)
+        {
+            if(!in_array($join->getJoinType(), array('INNER', 'LEFT', 'RIGHT')))
+                throw new \Exception("FALHA - setJoin(): [{$join->getJoinType()}] \$joinType inválido");
+            
+           foreach (explode('=', $join->getOnClause()) as $field)
+            {
+                if($this->isValidField($field) === false)
+                    throw new \Exception("FALHA - setJoin(): [{$field}] Campo inválido para a cláusula \$onClause");
+            }     
+        }
+    }
+    
+    private function validConcat()
+    {
+        foreach ($this->concats as $concat)
+        {
+            foreach ($concat['fields'] as $field)
+            {
+                if($this->isValidField($field) === false)
+                    throw new \Exception("FALHA - setConcat(): [$field] Campo inválido para ser concatenado");
+            }
+        }
+    }
+    
+    private function validSum()
+    {
+        if(isset($this->sum) AND $this->isValidField($this->sum) === false)
+            throw new \Exception("FALHA - setSum(): [{$this->sum}] Campo inválido para ser feito o somatório");
     }
     
     public function getStamments()
@@ -101,10 +196,7 @@ class SqlRead implements SqlReadInterface
     }
     
     private function isValidField(string $field)
-    {
-        if(strstr('.', $field)===false)
-            $field = "{$this->table}.{$field}";
-        
+    {   
         return in_array($field, $this->fields);
     }
     
@@ -120,47 +212,32 @@ class SqlRead implements SqlReadInterface
         $this->stamments = $this->where->getStamments();
     }
 
-    public function setJoin(EntityInterface $entity, string $on, $joinType='INNER')
+    public function setJoin(EntityInterface $entity, string $onClause, string $joinType='INNER')
     {        
-        $tableName = $entity->getTableName();
+        $joinKey = count($this->joins);
+        $this->joins[$joinKey] = new SqlJoin($entity, $onClause);
+        $this->joins[$joinKey]->setJoinType($joinType);
         
-        foreach ($entity->getAtributes() as $field)
+        foreach ($this->joins[$joinKey]->getFields() as $field)
         {
-            $this->fields[count($this->fields)] = "{$tableName}.{$field}";
+            $this->fields[count($this->fields)] = $field;
         }
-        
-        if(!in_array($joinType, array('INNER', 'LEFT', 'RIGHT')))
-            throw new \Exception("FALHA - setJoin(): [{$joinType}] \$joinType inv�lido");
-        
-        foreach (explode('=', $on) as $field)
-        {
-            if($this->isValidField($field)===false)
-                throw new \Exception("FALHA - setJoin(): [{$field}] Campo inv�lido para a cl�usula \$on");
-        }
-        
-        $this->joins[count($this->joins)] = "{$joinType} JOIN {$tableName} ON {$on}";
     }
 
     public function setOrder($orderBy, $descOrder=false)
     {
-        if(!$this->isValidField($orderBy))
-            throw new \Exception("FALHA - setOrder(): [{$orderBy}] Campo desconhecido para ordenar consulta");
+        $this->orderBy = (count(explode('.', $orderBy))==1 ? "{$this->table}.{$orderBy}" : $orderBy);
         
-        $this->order = (is_numeric(strstr('.', $orderBy)) ? $orderBy : "{$this->table}.{$orderBy}");
         if($descOrder)
-            $this->order.= " DESC";
+            $this->orderGrow = " DESC";
         else 
-            $this->order.= " ASC";
+            $this->orderGrow = " ASC";
     }
 
     public function setLimit(int $limit, int $offset=0)
     {
-        if($limit < 1)
-            throw new \Exception("FALHA - setLimit(): [{$limit}] Valor da vari�vel \$limit menor que 1");
-        if($offset < 0)
-            throw new \Exception("FALHA - setLimit(): [{$offset}] Valor da vari�vel \$offset menor que 0");
-        
-        $this->limit = "{$offset}, {$limit}";
+        $this->limit = $limit;
+        $this->offset = $offset;
     }
 
     public function setCount()
@@ -170,22 +247,21 @@ class SqlRead implements SqlReadInterface
 
     public function setSum(string $field)
     {
-        if(in_array($field, $this->fields))
-            $this->sum = $field;
+        $this->sum = (count(explode('.', $field))==1 ? "{$this->table}.{$field}" : $field);
     }
 
-    public function setConcat(array $fields, string $alias, string $separator="' '")
+    public function setConcat(array $fields, string $alias, string $separator=" ")
     {
-        foreach ($fields as $field)
-        {
-            if(!array_search($field, $this->fields))
-                return;
-        }
-        $fields = implode(", {$separator}, ", $fields);
-        $this->fields[count($this->fields)] = "CONCAT ({$fields}) AS {$alias}";
+        foreach ($fields as $id=>$field)
+            $fields[$id] = (count(explode('.', $field))==1 ? "{$this->table}.{$field}" : $field);
+        
+        $this->concats[$alias] = array(
+            'fields' => $fields,
+            'separator'=>$separator
+        ); 
     }
 
-    public function setSubQuery($subQuery, string $alias)
+    public function setSubQuery(SqlReadInterface $subQuery, string $alias)
     {
         $this->fields[count($this->fields)] = "({$subQuery}) AS {$alias}";
     }
