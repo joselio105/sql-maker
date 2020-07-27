@@ -61,5 +61,31 @@ interface SqlReadInterface extends SqlInterface
      * @param string $field
      */
     public function setSum(string $field);
+    
+    public function setFieldToShow(string $field);
+    
+    public function getFieldList();
+    
+    public function getWhereObject();
+    
+    public function getOrderBy();
+    
+    public function getOrderGrow();
+    
+    public function getLimitInt();
+    
+    public function getOffsetInt();
+    
+    public function getJoinObjectList();
+    
+    public function getConcatList();
+    
+    public function getSubQueryList();
+    
+    public function getFieldToShow();
+    
+    public function getSumField();
+    
+    
 }
 
