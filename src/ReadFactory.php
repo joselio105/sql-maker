@@ -16,9 +16,9 @@ class ReadFactory
         try {
             //Construct
             //01
-            $sql = new SqlRead(new EntityFactory(Usuario::class));
+            $sql = new SqlRead(new EntityFactory(new Usuario()));
             //02
-            //$sql = new SqlRead(new EntityFactory(InvalidEntity::class));
+            //$sql = new SqlRead(new EntityFactory(new InvalidEntity()));
             
             //setWhere
             //03
@@ -50,7 +50,7 @@ class ReadFactory
             //28
             //$sql->setWhere("usuario.nome LIKE 'a%' AND cargo.nome = 'Gerente'");
             //13
-            $sql->setJoin(new EntityFactory(Cargo::class), "usuario.cargo=cargo.id", "INNER");
+            $sql->setJoin(new EntityFactory(new Cargo()), "usuario.cargo=cargo.id", "INNER");
             //14
             //$sql->setJoin(new EntityFactory(InvalidEntity::class), "usuario.cargo=cargo.id", "LEFT");
             //15
@@ -72,7 +72,7 @@ class ReadFactory
             
             //setSubQuery
             //32
-            $subQuery = new SqlRead(new EntityFactory(Usuario::class));
+            $subQuery = new SqlRead(new EntityFactory(new Usuario()));
             $subQuery->setCount();
             $subQuery->setFieldToShow("usuario.nome");
             $sql->setSubQuery($subQuery, 'teste');
