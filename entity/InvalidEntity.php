@@ -3,7 +3,4 @@
 namespace entity;
 
 class InvalidEntity
-{
-    
-}
-
+{}

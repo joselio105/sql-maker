@@ -11,5 +11,8 @@
 
 #Arquivos
 /config/*.json
+/src/CreateFactory.php
+/src/ReadFactory.php
+/index.php
 
 /vendor/
